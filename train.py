@@ -74,8 +74,8 @@ test_file_work_path = os.path.join(os.environ['WORK'], TEST_FILE)
 
 train_path_node = os.path.join(os.environ['TMPDIR'], os.environ['SLURM_JOBID'], "train_data")
 test_path_node = os.path.join(os.environ['TMPDIR'], os.environ['SLURM_JOBID'], "test_data")
-os.mkdir(train_path_node)
-os.mkdir(test_path_node)
+os.makedirs(train_path_node)
+os.makedirs(test_path_node)
 print("Created tmp paths: ", "\n", train_path_node, "\n", test_path_node)
 
 # COPY THE DATA from WORK to the Node at $TMPDIR/$SLURM_JOBID/Train(Test)
