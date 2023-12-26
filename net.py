@@ -13,6 +13,8 @@ def save_master_checkpoint(core_model, optimizer_d, optimizer_g,
         core_model (nn.Module): model
         optimizer_d (optimizer): optimizer for discriminant
         optimizer_g (optimizer): optimizer for discriminant
+        wave_disc: discriminator of the wave itself
+        stft_disc: discriminator of the stft of the wave
         ckpt_name: checkpoint path and name
     """
     state_dict = {
@@ -172,6 +174,7 @@ class SoundStream(nn.Module):
         # if not set (like here), then dim is the codes dim too
         self.quantizer = ResidualVQ(
             num_quantizers=n_q, dim=dim, codebook_size=codebook_size,
+            shared_codebook=True, quantize_dropout=True,
             kmeans_init=True, kmeans_iters=100, threshold_ema_dead_code=2
         )
         self.decoder = Decoder(C=channels, D=dim)
