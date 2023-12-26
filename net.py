@@ -181,7 +181,13 @@ class SoundStream(nn.Module):
 
     def forward(self, x):
         e = self.encoder(x)
+        # Very important: output of encoder is [B, C, T], where C is channels, which meant to be dim in the args
+        # dim should be also equal to the code length in codebook
+        e = e.permute(0, 2, 1)
+        # quantizer waits for the input like [B, T, dim]
         quantized, _, _ = self.quantizer(e)
+        # Need to swap back because decoder waits for [B, C, T]
+        quantized = quantized.permute(0, 2, 1)
         o = self.decoder(quantized)
         return o
 
