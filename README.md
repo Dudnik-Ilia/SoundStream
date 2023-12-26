@@ -1,6 +1,6 @@
 # SoundStream: An End-to-End Neural Audio Codec
 
-This repository is an implementation of the [article](https://arxiv.org/abs/2107.03312) with same name.
+This repository is an implementation of the [article](https://arxiv.org/abs/2107.03312).
 
 <p align="center">
 <img src="./images/soundstream.png" alt="SoundStream's architecture"/>
@@ -13,7 +13,6 @@ I built this implementation to serve my needs and some features are missing from
 ## Missing pieces
 
 - [ ] __Denoising__: this implementation is not built to denoise, so there is no conditioning signal nor _Feature-wise Linear Modulation_ blocks.
-- [ ] __Bitrate scalability__: for now, quantizer dropout has not been implemented.
 
 ## Citations
 
