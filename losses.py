@@ -37,8 +37,8 @@ def spectral_reconstruction_loss(x, G_x, eps=1e-4, device="cpu", sr=24000):
     for i in range(6, 12):
         s = 2 ** i
         alpha_s = (s / 2) ** 0.5
-        melspec = MelSpectrogram(sample_rate=sr, n_fft=s, hop_length=s // 4, n_mels=8, wkwargs={"device": device}).to(
-            device)
+        melspec = MelSpectrogram(sample_rate=sr, n_fft=s,
+                                 hop_length=s // 4, n_mels=8, wkwargs={"device": device}).to(device)
         S_x = melspec(x)
         S_G_x = melspec(G_x)
 

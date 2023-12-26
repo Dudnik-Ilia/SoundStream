@@ -58,13 +58,17 @@ def collate_fn(batch):
     return nn.utils.rnn.pad_sequence(batch, batch_first=True), lengths
 
 
-def overall_stft(x: torch.Tensor, window_length=W, hop=H, device=DEVICE):
+def overall_stft(x: torch.Tensor, window_length=1024, hop=256, device='cpu'):
     """
     stft used everywhere the same
     """
-    return torch.stft(x.squeeze(), n_fft=1024, hop_length=hop,
+    x = x.squeeze() # delete dimensions of 1 (channel)
+    stft = torch.stft(x, n_fft=1024, hop_length=hop,
                       window=torch.hann_window(window_length=window_length, device=device),
-                      return_complex=False).permute(0, 3, 1, 2)
+                      return_complex=False)
+    # Permute to [Batch, Real/Img, Freq, Time]
+    stft = stft.permute(0, 3, 1, 2)
+    return stft
 
 
 # The following is the part for copying the dat to the node
@@ -174,7 +178,7 @@ for epoch in range(1, N_EPOCHS + 1):
         # Calculate loss for generator
         loss_g = criterion_g(x, G_x, features_stft_disc_x, features_wave_disc_x,
                              features_stft_disc_G_x, features_wave_disc_G_x,
-                             lengths_wave, lengths_stft, SR, DEVICE, lambdas)
+                             lengths_wave, lengths_stft, DEVICE, SR, lambdas)
         train_loss_g += loss_g.item()
 
         optimizer_g.zero_grad()
@@ -233,7 +237,7 @@ for epoch in range(1, N_EPOCHS + 1):
             features_wave_disc_G_x = wave_disc(G_x)
 
             loss_g = criterion_g(x, G_x, features_stft_disc_x, features_wave_disc_x, features_stft_disc_G_x,
-                                 features_wave_disc_G_x, lengths_wave, lengths_stft, SR, DEVICE, lambdas)
+                                 features_wave_disc_G_x, lengths_wave, lengths_stft,DEVICE, SR, lambdas)
             test_loss_g += loss_g.item()
 
             features_stft_disc_x = stft_disc(stft_x)
