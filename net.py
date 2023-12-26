@@ -6,6 +6,25 @@ import os
 from vector_quantize_pytorch import ResidualVQ
 
 
+def save_master_checkpoint(core_model, optimizer_d, optimizer_g,
+                           wave_disc, stft_disc, ckpt_name):
+    """save checkpoint
+    Args:
+        core_model (nn.Module): model
+        optimizer_d (optimizer): optimizer for discriminant
+        optimizer_g (optimizer): optimizer for discriminant
+        ckpt_name: checkpoint path and name
+    """
+    state_dict = {
+        'model_state_dict': core_model.state_dict(),
+        'optimizer_d_dict': optimizer_d.state_dict(),
+        'scheduler_g_dict': optimizer_g.state_dict(),
+        'wave_disc_dict': wave_disc.state_dict(),
+        'stft_disc_dict': stft_disc.state_dict(),
+    }
+    torch.save(state_dict, ckpt_name)
+
+
 class CausalConv1d(nn.Conv1d):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

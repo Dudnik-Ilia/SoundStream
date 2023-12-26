@@ -7,7 +7,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from net import SoundStream, WaveDiscriminator, STFTDiscriminator
+from net import SoundStream, WaveDiscriminator, STFTDiscriminator, save_master_checkpoint
 from dataset import NSynthDataset
 from losses import *
 
@@ -48,25 +48,6 @@ def overall_stft(x: torch.Tensor, window_length=W, hop=H, device=DEVICE):
     return torch.stft(x.squeeze(), n_fft=1024, hop_length=hop,
                       window=torch.hann_window(window_length=window_length, device=device),
                       return_complex=False).permute(0, 3, 1, 2)
-
-
-def save_master_checkpoint(core_model, optimizer_d, optimizer_g,
-                           wave_disc, stft_disc, ckpt_name):
-    """save checkpoint
-    Args:
-        core_model (nn.Module): model
-        optimizer_d (optimizer): optimizer for discriminant
-        optimizer_g (optimizer): optimizer for discriminant
-        ckpt_name: checkpoint path and name
-    """
-    state_dict = {
-        'model_state_dict': core_model.state_dict(),
-        'optimizer_d_dict': optimizer_d.state_dict(),
-        'scheduler_g_dict': optimizer_g.state_dict(),
-        'wave_disc_dict': wave_disc.state_dict(),
-        'stft_disc_dict': stft_disc.state_dict(),
-    }
-    torch.save(state_dict, ckpt_name)
 
 
 soundstream = SoundStream(channels=1, dim=1, n_q=1, codebook_size=1)
