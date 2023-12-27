@@ -73,7 +73,7 @@ features_wave_disc_G_x = wave_disc(G_x)
 # Calculate loss for generator
 loss_g = criterion_g(x, G_x, features_stft_disc_x, features_wave_disc_x,
                      features_stft_disc_G_x, features_wave_disc_G_x,
-                     lengths_wave, lengths_stft, DEVICE, SR, lambdas)
+                     lengths_wave, lengths_stft, SR, DEVICE, lambdas)
 train_loss_g += loss_g.item()
 
 optimizer_g.zero_grad()

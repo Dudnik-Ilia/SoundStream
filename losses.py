@@ -19,6 +19,9 @@ def feature_loss(features_stft_disc_x, features_wave_disc_x,
                  lengths_wave, lengths_stft):
     wave_disc_names = lengths_wave.keys()
 
+    for layer_x, layer_G_x in zip(features_stft_disc_x, features_stft_disc_G_x):
+        assert layer_x.shape == layer_G_x.shape
+
     stft_loss = torch.stack(
         [((feat_x - feat_G_x).abs().sum(dim=-1) / lengths_stft[i].view(-1, 1, 1)).sum(dim=-1).sum(dim=-1) for
          i, (feat_x, feat_G_x) in enumerate(zip(features_stft_disc_x, features_stft_disc_G_x))], dim=1).mean(dim=1,
@@ -87,7 +90,7 @@ def criterion_g(x, G_x, features_stft_disc_x,
     feat_loss = LAMBDA_FEAT * feature_loss(features_stft_disc_x, features_wave_disc_x,
                                            features_stft_disc_G_x, features_wave_disc_G_x,
                                            lengths_wave, lengths_stft)
-    rec_loss = LAMBDA_REC * spectral_reconstruction_loss(x, G_x, device, sr)
+    rec_loss = LAMBDA_REC * spectral_reconstruction_loss(x, G_x, device=device, sr=sr)
 
     total_loss = adv_loss + feat_loss + rec_loss
     return total_loss
