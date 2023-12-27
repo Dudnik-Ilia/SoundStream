@@ -39,7 +39,7 @@ RESUME = False
 CHECKPOINT_REPOSITORY = ""
 CHECKPOINT_NAME = ""
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = str(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
 
 
 def log_history(history: dict):
@@ -159,8 +159,8 @@ for epoch in range(1, N_EPOCHS + 1):
         G_x = soundstream(x)
 
         # Calculate STFT of both X and Generated_X
-        stft_x = overall_stft(x)
-        stft_G_x = overall_stft(G_x)
+        stft_x = overall_stft(x, device=DEVICE)
+        stft_G_x = overall_stft(G_x, device=DEVICE)
 
         lengths_s_x = 1 + torch.div(lengths_x, 256, rounding_mode="floor")
 
@@ -222,8 +222,8 @@ for epoch in range(1, N_EPOCHS + 1):
 
             G_x = soundstream(x)
 
-            stft_x = overall_stft(x)
-            stft_G_x = overall_stft(G_x)
+            stft_x = overall_stft(x, device=DEVICE)
+            stft_G_x = overall_stft(G_x, device=DEVICE)
 
             lengths_s_x = 1 + torch.div(lengths_x, 256, rounding_mode="floor")
 
