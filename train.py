@@ -1,17 +1,16 @@
 import os
 import shutil
 import tarfile
-import pickle
 from time import gmtime, strftime
-import torch.nn as nn
-
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from numpy import prod
 
-from net import SoundStream, WaveDiscriminator, STFTDiscriminator, save_master_checkpoint
+from net import SoundStream, WaveDiscriminator, STFTDiscriminator
 from dataset import NSynthDataset
 from losses import *
+from utils import collate_fn, overall_stft, log_history, save_master_checkpoint
 
 # Lambdas for loss weighting
 LAMBDA_ADV = 1
@@ -20,11 +19,25 @@ LAMBDA_REC = 1
 lambdas = [LAMBDA_ADV, LAMBDA_FEAT, LAMBDA_REC]
 
 # Learning params
+STRIDES = [8, 5, 4, 2]
+TENSOR_CUT = 64000
 N_EPOCHS = 15
 BATCH_SIZE = 6
-TENSOR_CUT = 36000
 LR = 1e-4
 SAVE_FOLDER = "/home/woody/iwi1/iwi1010h/checkpoints/SoundStream/"
+
+if not os.path.exists(SAVE_FOLDER):
+    # If not, create the directory
+    os.makedirs(SAVE_FOLDER)
+
+# Need to check this division by 320, because this is a 'compression' parameter made of Strides in encoder/decoder block
+# If the length of the audio would not be divisible by 320, then x != G_x
+# prod(STRIDES) == 320
+assert TENSOR_CUT % prod(STRIDES) == 0
+# at least ~1500 length because discriminator kernel 7 by 7 and otherwise would be 6 (hop 256*6 ~ 1500)
+assert TENSOR_CUT > 2000
+# need to specify at least 2 as a batch, because there is a squeeze in the stft
+assert BATCH_SIZE > 1
 
 # Windows length and hop for stft
 W, H = 1024, 256
@@ -40,36 +53,6 @@ CHECKPOINT_REPOSITORY = ""
 CHECKPOINT_NAME = ""
 
 DEVICE = str(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
-
-
-def log_history(history: dict):
-    """
-    Log history dict with losses
-    Rewrites the file if the file exists
-    """
-    save_name = os.path.join(SAVE_FOLDER, f"history_"\
-                             + strftime("%m-%d_%H:%M", gmtime()) + ".p")
-    pickle.dump(history, open(save_name, "wb"))
-
-
-# make equal length
-def collate_fn(batch):
-    lengths = torch.tensor([elem.shape[-1] for elem in batch])
-    return nn.utils.rnn.pad_sequence(batch, batch_first=True), lengths
-
-
-def overall_stft(x: torch.Tensor, window_length=1024, hop=256, device='cpu'):
-    """
-    stft used everywhere the same
-    """
-    x = x.squeeze() # delete dimensions of 1 (channel)
-    stft = torch.stft(x, n_fft=1024, hop_length=hop,
-                      window=torch.hann_window(window_length=window_length, device=device),
-                      return_complex=False)
-    # Permute to [Batch, Real/Img, Freq, Time]
-    stft = stft.permute(0, 3, 1, 2)
-    return stft
-
 
 # The following is the part for copying the dat to the node
 # for Cloud computing purposes
@@ -253,7 +236,7 @@ for epoch in range(1, N_EPOCHS + 1):
 
             # Save the model
             if test_loss_g < best_test_loss:
-                save_name = os.path.join(SAVE_FOLDER, f"ladv_{LAMBDA_ADV}_lrec_{LAMBDA_REC}_lfeat_{LAMBDA_FEAT}_" \
+                save_name = os.path.join(SAVE_FOLDER, f"la_{LAMBDA_ADV}_lr_{LAMBDA_REC}_lf_{LAMBDA_FEAT}_ep_{epoch}_" \
                                          + strftime("%m-%d_%H:%M", gmtime()) + ".cpt")
                 best_test_loss = test_loss_g
                 save_master_checkpoint(soundstream, optimizer_d, optimizer_g, wave_disc, stft_disc, save_name)
@@ -265,4 +248,4 @@ for epoch in range(1, N_EPOCHS + 1):
         history["test"]["g"].append(test_loss_g / len(test_loader))
 
     # At the end of epoch rewrite losses dict
-    log_history(history)
+    log_history(history, SAVE_FOLDER)
