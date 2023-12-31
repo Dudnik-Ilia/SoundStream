@@ -1,4 +1,6 @@
 import os.path
+
+from numpy import prod
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import torch.optim as optim
@@ -6,13 +8,13 @@ import torch.optim as optim
 from dataset import NSynthDataset
 from net import SoundStream, WaveDiscriminator, STFTDiscriminator
 from losses import *
-from utils import collate_fn, overall_stft
+from utils import collate_fn, overall_stft, pad_exception
 
 LAMBDA_ADV = 1
 LAMBDA_FEAT = 100
 LAMBDA_REC = 1
 lambdas = [LAMBDA_ADV, LAMBDA_FEAT, LAMBDA_REC]
-
+STRIDES = [8, 5, 4, 2]
 SR = 24000
 LR = 1e-4
 DEVICE = "cpu"
@@ -48,6 +50,10 @@ for epoch in range(1, N_EPOCHS + 1):
     for x, lengths_x in tqdm(train_loader):
         x = x.to(DEVICE)
         lengths_x = lengths_x.to(DEVICE)
+
+        # Exception
+        if x.shape[2] % prod(STRIDES) != 0:
+            x, lengths_x = pad_exception(x, TENSOR_CUT, DEVICE)
 
         # Generated x (output)
         G_x = soundstream(x)

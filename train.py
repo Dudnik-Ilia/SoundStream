@@ -10,7 +10,7 @@ from numpy import prod
 from net import SoundStream, WaveDiscriminator, STFTDiscriminator
 from dataset import NSynthDataset
 from losses import *
-from utils import collate_fn, overall_stft, log_history, save_master_checkpoint
+from utils import collate_fn, overall_stft, log_history, save_master_checkpoint, pad_exception
 
 # Lambdas for loss weighting
 LAMBDA_ADV = 1
@@ -138,6 +138,10 @@ for epoch in range(1, N_EPOCHS + 1):
         x = x.to(DEVICE)
         lengths_x = lengths_x.to(DEVICE)
 
+        # Exception, if length not div by 320
+        if x.shape[2] % prod(STRIDES) != 0:
+            x, lengths_x = pad_exception(x, TENSOR_CUT, DEVICE)
+
         # Generated x (output)
         G_x = soundstream(x)
 
@@ -202,6 +206,10 @@ for epoch in range(1, N_EPOCHS + 1):
         for x, lengths_x in tqdm(test_loader):
             x = x.to(DEVICE)
             lengths_x = lengths_x.to(DEVICE)
+
+            # Exception
+            if x.shape[2] % prod(STRIDES) != 0:
+                x, lengths_x = pad_exception(x, TENSOR_CUT, DEVICE)
 
             G_x = soundstream(x)
 
