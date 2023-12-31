@@ -14,7 +14,7 @@ from utils import collate_fn, overall_stft, log_history, save_master_checkpoint,
 
 # Lambdas for loss weighting
 LAMBDA_ADV = 1
-LAMBDA_FEAT = 100
+LAMBDA_FEAT = 1
 LAMBDA_REC = 1
 lambdas = [LAMBDA_ADV, LAMBDA_FEAT, LAMBDA_REC]
 
@@ -24,7 +24,7 @@ TENSOR_CUT = 64000
 N_EPOCHS = 15
 BATCH_SIZE = 6
 LR = 1e-4
-SAVE_FOLDER = "/home/woody/iwi1/iwi1010h/checkpoints/SoundStream/"
+SAVE_FOLDER = os.path.join("/home/woody/iwi1/iwi1010h/checkpoints/SoundStream/", os.environ['SLURM_JOBID'])
 
 if not os.path.exists(SAVE_FOLDER):
     # If not, create the directory
