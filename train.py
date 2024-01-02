@@ -14,7 +14,7 @@ from utils import collate_fn, overall_stft, log_history, save_master_checkpoint,
 
 # Lambdas for loss weighting
 LAMBDA_ADV = 1
-LAMBDA_FEAT = 1
+LAMBDA_FEAT = 100
 LAMBDA_REC = 1
 lambdas = [LAMBDA_ADV, LAMBDA_FEAT, LAMBDA_REC]
 
@@ -25,7 +25,7 @@ N_EPOCHS = 15
 N_WARMUP_EPOCHS = 3
 TRAIN_DISC_EVERY = 2
 BATCH_SIZE = 6
-LR = 1e-8
+LR = 1e-6
 SAVE_FOLDER = os.path.join("/home/woody/iwi1/iwi1010h/checkpoints/SoundStream/", os.environ['SLURM_JOBID'])
 
 if not os.path.exists(SAVE_FOLDER):
@@ -183,12 +183,17 @@ for epoch in range(1, N_EPOCHS + 1):
         optimizer_g.zero_grad()
         loss_g.backward()
         # for logging + clipping of the grad
-        grad_norm = torch.nn.utils.clip_grad_norm_(soundstream.parameters(), max_norm=float(10))
+        if loss_g.item() > 1e+6:
+            norm = 1000
+        elif loss_g.item() > 1e+4:
+            norm = 100
+        else:
+            norm = 10
+        grad_norm = torch.nn.utils.clip_grad_norm_(soundstream.parameters(), max_norm=float(norm))
         optimizer_g.step()
 
         history[f"{epoch}"]["loss"].append(loss_g.detach().item())
         history[f"{epoch}"]["grad_norm"].append(grad_norm.detach().item())
-
 
         if epoch > N_WARMUP_EPOCHS:
             if i % TRAIN_DISC_EVERY == 0:
