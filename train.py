@@ -180,8 +180,8 @@ for epoch in range(1, N_EPOCHS + 1):
         train_loss_g += loss_g.item()
         grad_norm = torch.nn.utils.clip_grad_norm_(soundstream.parameters(), max_norm=float('inf'))
 
-        history[f"{epoch}"]["loss"].append(loss_g.detach.item())
-        history[f"{epoch}"]["grad_norm"].append(grad_norm.detach.item())
+        history[f"{epoch}"]["loss"].append(loss_g.detach().item())
+        history[f"{epoch}"]["grad_norm"].append(grad_norm.detach().item())
 
         optimizer_g.zero_grad()
         loss_g.backward()
