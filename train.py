@@ -22,8 +22,10 @@ lambdas = [LAMBDA_ADV, LAMBDA_FEAT, LAMBDA_REC]
 STRIDES = [8, 5, 4, 2]
 TENSOR_CUT = 64000
 N_EPOCHS = 15
+N_WARMUP_EPOCHS = 3
+TRAIN_DISC_EVERY = 2
 BATCH_SIZE = 6
-LR = 1e-4
+LR = 1e-6
 SAVE_FOLDER = os.path.join("/home/woody/iwi1/iwi1010h/checkpoints/SoundStream/", os.environ['SLURM_JOBID'])
 
 if not os.path.exists(SAVE_FOLDER):
@@ -44,7 +46,7 @@ W, H = 1024, 256
 SR = 24000
 
 # Data names that should be at WORK
-TRAIN_FILE = "train-clean-360.tar.gz"
+TRAIN_FILE = "train-clean-100.tar.gz"
 TEST_FILE = "test-clean.tar.gz"
 
 # If continue training
@@ -106,7 +108,7 @@ stft_disc.to(DEVICE)
 criterion_d = adversarial_d_loss
 
 optimizer_g = optim.Adam(soundstream.parameters(), lr=LR, betas=(0.5, 0.9))
-optimizer_d = optim.Adam(list(wave_disc.parameters()) + list(stft_disc.parameters()), lr=1e-4, betas=(0.5, 0.9))
+optimizer_d = optim.Adam(list(wave_disc.parameters()) + list(stft_disc.parameters()), lr=LR, betas=(0.5, 0.9))
 
 # If continue training, load states for all models + optimizers
 if RESUME:
@@ -134,7 +136,15 @@ for epoch in range(1, N_EPOCHS + 1):
 
     train_loss_d = 0.0
     train_loss_g = 0.0
+
+    # For counting batches
+    i = 0
+
+    history[f"{epoch}"] = {"grad_norm": [],
+                           "loss": []}
     for x, lengths_x in tqdm(train_loader):
+        i += 1
+
         x = x.to(DEVICE)
         lengths_x = lengths_x.to(DEVICE)
 
@@ -166,29 +176,37 @@ for epoch in range(1, N_EPOCHS + 1):
         loss_g = criterion_g(x, G_x, features_stft_disc_x, features_wave_disc_x,
                              features_stft_disc_G_x, features_wave_disc_G_x,
                              lengths_wave, lengths_stft, SR, DEVICE, lambdas)
+
         train_loss_g += loss_g.item()
+        grad_norm = torch.nn.utils.clip_grad_norm_(soundstream.parameters(), max_norm=float('inf'))
+
+        history[f"{epoch}"]["loss"].append(loss_g.detach.item())
+        history[f"{epoch}"]["grad_norm"].append(grad_norm.detach.item())
 
         optimizer_g.zero_grad()
         loss_g.backward()
         optimizer_g.step()
 
-        # Run once for through Discriminators (because this time need to propagate just discriminator)
-        # --> detach generated_X
-        features_stft_disc_x = stft_disc(stft_x)
-        features_wave_disc_x = wave_disc(x)
+        if epoch > N_WARMUP_EPOCHS:
+            if i % TRAIN_DISC_EVERY == 0:
+                i = 0
+                # Run once for through Discriminators (because this time need to propagate just discriminator)
+                # --> detach generated_X
+                features_stft_disc_x = stft_disc(stft_x)
+                features_wave_disc_x = wave_disc(x)
 
-        features_stft_disc_G_x_det = stft_disc(stft_G_x.detach())
-        features_wave_disc_G_x_det = wave_disc(G_x.detach())
+                features_stft_disc_G_x_det = stft_disc(stft_G_x.detach())
+                features_wave_disc_G_x_det = wave_disc(G_x.detach())
 
-        # Calculate loss for discriminator
-        loss_d = criterion_d(features_stft_disc_x, features_wave_disc_x, features_stft_disc_G_x_det,
-                             features_wave_disc_G_x_det, lengths_stft, lengths_wave)
+                # Calculate loss for discriminator
+                loss_d = criterion_d(features_stft_disc_x, features_wave_disc_x, features_stft_disc_G_x_det,
+                                     features_wave_disc_G_x_det, lengths_stft, lengths_wave)
 
-        train_loss_d += loss_d.item()
+                train_loss_d += loss_d.item()
 
-        optimizer_d.zero_grad()
-        loss_d.backward()
-        optimizer_d.step()
+                optimizer_d.zero_grad()
+                loss_d.backward()
+                optimizer_d.step()
 
     print(f"Epoch {epoch}, train gen loss is {train_loss_g / len(train_loader)}")
     print(f"Epoch {epoch}, train disc loss is {train_loss_d / len(train_loader)}")
