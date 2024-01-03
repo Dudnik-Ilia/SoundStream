@@ -1,32 +1,15 @@
-import os
-import shutil
-import tarfile
 from time import gmtime, strftime
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from numpy import prod
 
+from config import *
 from net import SoundStream, WaveDiscriminator, STFTDiscriminator
 from dataset import NSynthDataset
 from losses import *
-from utils import collate_fn, overall_stft, log_history, save_master_checkpoint, pad_exception, load_master_checkpoint
-
-# Lambdas for loss weighting
-LAMBDA_ADV = 1
-LAMBDA_FEAT = 100
-LAMBDA_REC = 1
-lambdas = [LAMBDA_ADV, LAMBDA_FEAT, LAMBDA_REC]
-
-# Learning params
-STRIDES = [8, 5, 4, 2]
-TENSOR_CUT = 64000
-N_EPOCHS = 15
-N_WARMUP_EPOCHS = 3
-TRAIN_DISC_EVERY = 2
-BATCH_SIZE = 6
-LR = 1e-6
-SAVE_FOLDER = os.path.join("/home/woody/iwi1/iwi1010h/checkpoints/SoundStream/", os.environ['SLURM_JOBID'])
+from utils import collate_fn, overall_stft, log_history, save_master_checkpoint, pad_exception, load_master_checkpoint, \
+    copy_data_to_node
 
 if not os.path.exists(SAVE_FOLDER):
     # If not, create the directory
@@ -41,47 +24,8 @@ assert TENSOR_CUT > 2000
 # need to specify at least 2 as a batch, because there is a squeeze in the stft
 assert BATCH_SIZE > 1
 
-# Windows length and hop for stft
-W, H = 1024, 256
-SR = 24000
-
-# Data names that should be at WORK
-TRAIN_FILE = "train-clean-100.tar.gz"
-TEST_FILE = "test-clean.tar.gz"
-
-# If continue training
-RESUME = False
-CHECKPOINT_REPOSITORY = ""
-CHECKPOINT_NAME = ""
-
-DEVICE = str(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
-
-# The following is the part for copying the dat to the node
-# for Cloud computing purposes
-train_file_work_path = os.path.join(os.environ['WORK'], TRAIN_FILE)
-test_file_work_path = os.path.join(os.environ['WORK'], TEST_FILE)
-
-train_path_node = os.path.join(os.environ['TMPDIR'], os.environ['SLURM_JOBID'], "train_data")
-test_path_node = os.path.join(os.environ['TMPDIR'], os.environ['SLURM_JOBID'], "test_data")
-os.makedirs(train_path_node)
-os.makedirs(test_path_node)
-print("Created tmp paths: ", "\n", train_path_node, "\n", test_path_node)
-
-# COPY THE DATA from WORK to the Node at $TMPDIR/$SLURM_JOBID/Train(Test)
-shutil.copy(train_file_work_path, train_path_node)
-shutil.copy(test_file_work_path, test_path_node)
-print("Copied archives")
-
-# Tars are in the 'train_path_node' and 'test_path_node'
-# Extract the inhalt to the same paths, so they will be at the same place where Tars are
-file = tarfile.open(os.path.join(train_path_node, TRAIN_FILE))
-file.extractall(train_path_node)
-file.close()
-print("Unzipped train")
-file = tarfile.open(os.path.join(test_path_node, TEST_FILE))
-file.extractall(test_path_node)
-file.close()
-print("Unzipped test")
+# HPC data transfer + decompression
+train_path_node, test_path_node = copy_data_to_node(TRAIN_FILE, TEST_FILE)
 
 train_dataset = NSynthDataset(audio_dir=train_path_node, sample_rate=SR, tensor_cut=TENSOR_CUT)
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, collate_fn=collate_fn)

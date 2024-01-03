@@ -1,5 +1,7 @@
 import os
 import pickle
+import shutil
+import tarfile
 from time import strftime, gmtime
 import torch
 from torch import nn
@@ -91,6 +93,41 @@ def load_master_checkpoint(checkpoint_repository, checkpoint_name,
     stft_disc.load_state_dict(state_dict['stft_disc_dict'])
 
     return 0
+
+
+def copy_data_to_node(train_file, test_file):
+    """
+    The following is the part for copying the data to the node
+    for Cloud computing purposes
+    Following env var needed: WORK, TMPDIR, SLURM_JOBID
+    Returns: folders with audios (like Librispeech)
+    """
+    train_file_work_path = os.path.join(os.environ['WORK'], train_file)
+    test_file_work_path = os.path.join(os.environ['WORK'], test_file)
+
+    train_path_node = os.path.join(os.environ['TMPDIR'], os.environ['SLURM_JOBID'], "train_data")
+    test_path_node = os.path.join(os.environ['TMPDIR'], os.environ['SLURM_JOBID'], "test_data")
+    os.makedirs(train_path_node)
+    os.makedirs(test_path_node)
+    print("Created tmp paths: ", "\n", train_path_node, "\n", test_path_node)
+
+    # COPY THE DATA from WORK to the Node at $TMPDIR/$SLURM_JOBID/Train(Test)
+    shutil.copy(train_file_work_path, train_path_node)
+    shutil.copy(test_file_work_path, test_path_node)
+    print("Copied archives")
+
+    # Tars are in the 'train_path_node' and 'test_path_node'
+    # Extract the inhalt to the same paths, so they will be at the same place where Tars are
+    file = tarfile.open(os.path.join(train_path_node, train_file))
+    file.extractall(train_path_node)
+    file.close()
+    print("Unzipped train")
+    file = tarfile.open(os.path.join(test_path_node, test_file))
+    file.extractall(test_path_node)
+    file.close()
+    print("Unzipped test")
+
+    return train_path_node, test_path_node
 
 """
 # Test case
