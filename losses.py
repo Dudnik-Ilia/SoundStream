@@ -37,19 +37,21 @@ def feature_loss(features_stft_disc_x, features_wave_disc_x,
 
 def spectral_reconstruction_loss(x, G_x, eps=1e-4, device="cpu", sr=24000):
     L = 0
-    for i in range(6, 12):
+    for i in torch.arange(6, 12):
         s = 2 ** i
         alpha_s = (s / 2) ** 0.5
         melspec = MelSpectrogram(sample_rate=sr, n_fft=s,
-                                 hop_length=s // 4, n_mels=64, wkwargs={"device": device}).to(device)
+                                 hop_length=s // 4, n_mels=64).to(device)
         S_x = melspec(x)
         S_G_x = melspec(G_x)
 
-        loss_1 = (S_x - S_G_x).abs().sum()
+        # MAE instead of just summ (independent of length)
+        loss_1 = F.l1_loss(S_x, S_G_x)
         loss_2 = (torch.log(S_x.abs() + eps) - torch.log(S_G_x.abs() + eps)) ** 2
         loss_2 = loss_2.sum(dim=-2)
-        loss_2 = loss_2 ** 0.5
-        loss_2 = alpha_s * loss_2.sum()
+        loss_2 = loss_2.sqrt()
+        # Also mean instead of a summ
+        loss_2 = alpha_s * loss_2.mean()
         L += loss_1+loss_2
 
     return L

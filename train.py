@@ -101,7 +101,6 @@ for epoch in range(1, N_EPOCHS + 1):
 
         lengths_s_x = 1 + torch.div(lengths_x, 256, rounding_mode="floor")
 
-        # TODO: What are these lengths?
         lengths_stft = stft_disc.features_lengths(lengths_s_x)
         lengths_wave = wave_disc.features_lengths(lengths_x)
 
@@ -122,6 +121,7 @@ for epoch in range(1, N_EPOCHS + 1):
 
         optimizer_g.zero_grad()
         loss_g.backward()
+
         # for logging + clipping of the grad
         if loss_g.item() > 1e+6:
             norm = 1000
