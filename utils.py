@@ -68,6 +68,30 @@ def save_master_checkpoint(core_model, optimizer_d, optimizer_g,
     }
     torch.save(state_dict, ckpt_name)
 
+def load_master_checkpoint(checkpoint_repository, checkpoint_name,
+                           soundstream, optimizer_g, optimizer_d,
+                           wave_disc, stft_disc):
+    """load checkpoint
+    Args:
+        soundstream (nn.Module): model
+        optimizer_d (optimizer): optimizer for discriminant
+        optimizer_g (optimizer): optimizer for discriminant
+        wave_disc: discriminator of the wave itself
+        stft_disc: discriminator of the stft of the wave
+        checkpoint_name: checkpoint path and name
+        checkpoint_repository: folder
+    """
+
+    file = os.path.join(checkpoint_repository, checkpoint_name)
+    state_dict = torch.load(file, map_location='cpu')
+    soundstream.load_state_dict(state_dict['model_state_dict'])
+    optimizer_d.load_state_dict(state_dict['optimizer_d_dict'])
+    optimizer_g.load_state_dict(state_dict['optimizer_g_dict'])
+    wave_disc.load_state_dict(state_dict['wave_disc_dict'])
+    stft_disc.load_state_dict(state_dict['stft_disc_dict'])
+
+    return 0
+
 """
 # Test case
 batch = [torch.rand(size=(1,100)),

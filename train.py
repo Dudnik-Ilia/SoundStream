@@ -10,7 +10,7 @@ from numpy import prod
 from net import SoundStream, WaveDiscriminator, STFTDiscriminator
 from dataset import NSynthDataset
 from losses import *
-from utils import collate_fn, overall_stft, log_history, save_master_checkpoint, pad_exception
+from utils import collate_fn, overall_stft, log_history, save_master_checkpoint, pad_exception, load_master_checkpoint
 
 # Lambdas for loss weighting
 LAMBDA_ADV = 1
@@ -112,13 +112,9 @@ optimizer_d = optim.Adam(list(wave_disc.parameters()) + list(stft_disc.parameter
 
 # If continue training, load states for all models + optimizers
 if RESUME:
-    file = os.path.join(CHECKPOINT_REPOSITORY, CHECKPOINT_NAME)
-    state_dict = torch.load(file, map_location='cpu')
-    soundstream.load_state_dict(state_dict['model_state_dict'])
-    optimizer_d.load_state_dict(state_dict['optimizer_d_dict'])
-    optimizer_g.load_state_dict(state_dict['optimizer_g_dict'])
-    wave_disc.load_state_dict(state_dict['wave_disc_dict'])
-    stft_disc.load_state_dict(state_dict['stft_disc_dict'])
+    load_master_checkpoint(CHECKPOINT_REPOSITORY, CHECKPOINT_NAME,
+                           soundstream, optimizer_g, optimizer_d,
+                           wave_disc, stft_disc)
 
 best_test_loss = float("inf")
 
