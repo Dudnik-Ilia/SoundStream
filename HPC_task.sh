@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#SBATCH --job-name=soundstream_training_360
+#SBATCH --job-name=soundstream_training_100
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:1
 #SBATCH --partition=rtx3080

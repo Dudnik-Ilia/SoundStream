@@ -3,7 +3,7 @@ import torch
 
 # Lambdas for loss weighting
 LAMBDA_ADV = 1
-LAMBDA_FEAT = 100
+LAMBDA_FEAT = 10
 LAMBDA_REC = 1
 lambdas = [LAMBDA_ADV, LAMBDA_FEAT, LAMBDA_REC]
 
@@ -16,6 +16,7 @@ TRAIN_DISC_EVERY = 2
 BATCH_SIZE = 6
 LR = 1e-6
 SAVE_FOLDER = os.path.join("/home/woody/iwi1/iwi1010h/checkpoints/SoundStream/", os.environ['SLURM_JOBID'])
+SAVE_ACTIVATIONS = SAVE_FOLDER
 
 # Windows length and hop for stft
 W, H = 1024, 256

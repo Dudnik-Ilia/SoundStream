@@ -2,19 +2,13 @@ import os
 import pickle
 import shutil
 import tarfile
-from time import strftime, gmtime
+
+import numpy as np
 import torch
 from torch import nn
 import torch.nn.functional as F
 
-def log_history(history: dict, save_folder):
-    """
-    Log history dict with losses
-    Rewrites the file if the file exists
-    """
-    save_name = os.path.join(save_folder, f"history_" \
-                             + strftime("%m-%d_%H:%M", gmtime()) + ".p")
-    pickle.dump(history, open(save_name, "wb"))
+from net import EncoderBlock, DecoderBlock
 
 
 # make equal length
@@ -41,7 +35,7 @@ def overall_stft(x: torch.Tensor, window_length=1024, hop=256, device='cpu'):
     """
     stft used everywhere the same
     """
-    x = x.squeeze()  # delete dimensions of 1 (channel)
+    x = x.squeeze(1)  # delete dimensions of 1 (channel)
     stft = torch.stft(x, n_fft=1024, hop_length=hop,
                       window=torch.hann_window(window_length=window_length, device=device),
                       return_complex=False)
@@ -128,6 +122,71 @@ def copy_data_to_node(train_file, test_file):
     print("Unzipped test")
 
     return train_path_node, test_path_node
+
+
+class ActivationStatisticsHook:
+    def __init__(self, model):
+        self.activation_means = {}
+        self.activation_stds = {}
+
+        # Register hook for each module in the model
+        for name, module in model.named_modules():
+            if isinstance(module, EncoderBlock) or isinstance(module, DecoderBlock):
+                # Store the custom names specified during initialization
+                custom_name = getattr(module, 'custom_name', None)
+                if custom_name:
+                    self.activation_means[custom_name] = []
+                    self.activation_stds[custom_name] = []
+                module.register_forward_hook(self.forward_hook)
+
+    def forward_hook(self, module, input, output):
+        mean = output.mean().item()
+        std = output.std().item()
+
+        custom_name = getattr(module, 'custom_name', None)
+        if custom_name:
+            self.activation_means[custom_name].append(mean)
+            self.activation_stds[custom_name].append(std)
+
+    def clear_statistics(self):
+        for key in self.activation_means.keys():
+            self.activation_means[key] = []
+            self.activation_stds[key] = []
+
+    def aggregate_mean(self):
+        for key, value in self.activation_means.items():
+            self.activation_means[key] = np.mean(value)
+        for key, value in self.activation_stds.items():
+            self.activation_stds[key] = np.mean(value)
+
+
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
+def log_history(history: dict, save_folder):
+    """
+    Log history dict with losses
+    Rewrites the file if the file exists
+    """
+    save_name = os.path.normpath(os.path.join(save_folder, f"history.p"))
+    pickle.dump(history, open(save_name, "wb"))
+
+
+def log_activations(activations: dict, hook: ActivationStatisticsHook, save_folder: str, epoch: int):
+    """
+    Log history dict with losses
+    Rewrites the file if the file exists
+    """
+    activations_cur_ep = {
+        "mean": hook.activation_means,
+        "std": hook.activation_stds
+    }
+
+    activations[str(epoch)] = activations_cur_ep
+    save_name = os.path.normpath(os.path.join(save_folder, "activations.p"))
+    pickle.dump(activations, open(save_name, "wb"))
+
 
 """
 # Test case

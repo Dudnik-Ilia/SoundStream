@@ -7,8 +7,10 @@ from vector_quantize_pytorch import ResidualVQ
 
 
 class CausalConv1d(nn.Conv1d):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, custom_name=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.custom_name = custom_name
         self.causal_padding = self.dilation[0] * (self.kernel_size[0] - 1)
 
     def forward(self, x):
@@ -19,8 +21,10 @@ class CausalConv1d(nn.Conv1d):
 
 
 class CausalConvTranspose1d(nn.ConvTranspose1d):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, custom_name=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.custom_name = custom_name
         self.causal_padding = self.dilation[0] * (self.kernel_size[0] - 1) + self.output_padding[0] + 1 - self.stride[0]
 
     def forward(self, x, output_size=None):
@@ -42,11 +46,11 @@ class ResidualUnit(nn.Module):
         self.dilation = dilation
 
         self.layers = nn.Sequential(
-            CausalConv1d(in_channels=in_channels, out_channels=out_channels,
-                         kernel_size=7, dilation=dilation),
+            weight_norm(CausalConv1d(in_channels=in_channels, out_channels=out_channels,
+                                     kernel_size=7, dilation=dilation)),
             nn.ELU(),
-            nn.Conv1d(in_channels=in_channels, out_channels=out_channels,
-                      kernel_size=1)
+            weight_norm(nn.Conv1d(in_channels=in_channels, out_channels=out_channels,
+                                  kernel_size=1))
         )
 
     def forward(self, x):
@@ -54,9 +58,10 @@ class ResidualUnit(nn.Module):
 
 
 class EncoderBlock(nn.Module):
-    def __init__(self, out_channels, stride):
+    def __init__(self, out_channels, stride, custom_name=None):
         super().__init__()
 
+        self.custom_name = custom_name
         self.layers = nn.Sequential(
             ResidualUnit(in_channels=out_channels // 2,
                          out_channels=out_channels // 2, dilation=1),
@@ -67,8 +72,8 @@ class EncoderBlock(nn.Module):
             ResidualUnit(in_channels=out_channels // 2,
                          out_channels=out_channels // 2, dilation=9),
             nn.ELU(),
-            CausalConv1d(in_channels=out_channels // 2, out_channels=out_channels,
-                         kernel_size=2 * stride, stride=stride)
+            weight_norm(CausalConv1d(in_channels=out_channels // 2, out_channels=out_channels,
+                                     kernel_size=2 * stride, stride=stride))
         )
 
     def forward(self, x):
@@ -76,13 +81,14 @@ class EncoderBlock(nn.Module):
 
 
 class DecoderBlock(nn.Module):
-    def __init__(self, out_channels, stride):
+    def __init__(self, out_channels, stride, custom_name=None):
         super().__init__()
 
+        self.custom_name = custom_name
         self.layers = nn.Sequential(
-            CausalConvTranspose1d(in_channels=2 * out_channels,
-                                  out_channels=out_channels,
-                                  kernel_size=2 * stride, stride=stride),
+            weight_norm(CausalConvTranspose1d(in_channels=2 * out_channels,
+                                              out_channels=out_channels,
+                                              kernel_size=2 * stride, stride=stride)),
             nn.ELU(),
             ResidualUnit(in_channels=out_channels, out_channels=out_channels,
                          dilation=1),
@@ -103,17 +109,17 @@ class Encoder(nn.Module):
         super().__init__()
 
         self.layers = nn.Sequential(
-            CausalConv1d(in_channels=1, out_channels=C, kernel_size=7),
+            weight_norm(CausalConv1d(in_channels=1, out_channels=C, kernel_size=7)),
             nn.ELU(),
-            EncoderBlock(out_channels=2 * C, stride=2),
+            EncoderBlock(out_channels=2 * C, stride=2, custom_name="encodec.layer.1"),
             nn.ELU(),
-            EncoderBlock(out_channels=4 * C, stride=4),
+            EncoderBlock(out_channels=4 * C, stride=4, custom_name="encodec.layer.2"),
             nn.ELU(),
-            EncoderBlock(out_channels=8 * C, stride=5),
+            EncoderBlock(out_channels=8 * C, stride=5, custom_name="encodec.layer.3"),
             nn.ELU(),
-            EncoderBlock(out_channels=16 * C, stride=8),
+            EncoderBlock(out_channels=16 * C, stride=8, custom_name="encodec.layer.4"),
             nn.ELU(),
-            CausalConv1d(in_channels=16 * C, out_channels=D, kernel_size=3)
+            weight_norm(CausalConv1d(in_channels=16 * C, out_channels=D, kernel_size=3, custom_name="encodec.layer.5"))
         )
 
     def forward(self, x):
@@ -125,17 +131,17 @@ class Decoder(nn.Module):
         super().__init__()
 
         self.layers = nn.Sequential(
-            CausalConv1d(in_channels=D, out_channels=16 * C, kernel_size=7),
+            weight_norm(CausalConv1d(in_channels=D, out_channels=16 * C, kernel_size=7)),
             nn.ELU(),
-            DecoderBlock(out_channels=8 * C, stride=8),
+            DecoderBlock(out_channels=8 * C, stride=8, custom_name="decodec.layer.1"),
             nn.ELU(),
-            DecoderBlock(out_channels=4 * C, stride=5),
+            DecoderBlock(out_channels=4 * C, stride=5, custom_name="decodec.layer.2"),
             nn.ELU(),
-            DecoderBlock(out_channels=2 * C, stride=4),
+            DecoderBlock(out_channels=2 * C, stride=4, custom_name="decodec.layer.3"),
             nn.ELU(),
-            DecoderBlock(out_channels=C, stride=2),
+            DecoderBlock(out_channels=C, stride=2, custom_name="decodec.layer.4"),
             nn.ELU(),
-            CausalConv1d(in_channels=C, out_channels=1, kernel_size=7)
+            weight_norm(CausalConv1d(in_channels=C, out_channels=1, kernel_size=7, custom_name="decodec.layer.5"))
         )
 
     def forward(self, x):

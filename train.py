@@ -9,7 +9,7 @@ from net import SoundStream, WaveDiscriminator, STFTDiscriminator
 from dataset import NSynthDataset
 from losses import *
 from utils import collate_fn, overall_stft, log_history, save_master_checkpoint, pad_exception, load_master_checkpoint, \
-    copy_data_to_node
+    copy_data_to_node, ActivationStatisticsHook, log_activations
 
 if not os.path.exists(SAVE_FOLDER):
     # If not, create the directory
@@ -62,13 +62,15 @@ if RESUME:
 
 best_test_loss = float("inf")
 
-history = {
-    "train": {"d": [], "g": []},
-    "test": {"d": [], "g": []}
-}
+hook = ActivationStatisticsHook(soundstream)
+
+history = {}
+activations = {}
 
 # Training
 for epoch in range(1, N_EPOCHS + 1):
+
+    hook.clear_statistics()
 
     soundstream.train()
     stft_disc.train()
@@ -159,10 +161,6 @@ for epoch in range(1, N_EPOCHS + 1):
     print(f"Epoch {epoch}, train gen loss is {train_loss_g / len(train_loader)}")
     print(f"Epoch {epoch}, train disc loss is {train_loss_d / len(train_loader)}")
 
-    # Average loss per epoch
-    history["train"]["d"].append(train_loss_d / len(train_loader))
-    history["train"]["g"].append(train_loss_g / len(train_loader))
-
     with torch.no_grad():
         stft_disc.eval()
         wave_disc.eval()
@@ -218,8 +216,10 @@ for epoch in range(1, N_EPOCHS + 1):
         print(f"Epoch {epoch}, test gen loss is {test_loss_g / len(train_loader)}")
         print(f"Epoch {epoch}, test disc loss is {test_loss_d / len(train_loader)}")
 
-        history["test"]["d"].append(test_loss_d / len(test_loader))
-        history["test"]["g"].append(test_loss_g / len(test_loader))
-
     # At the end of epoch rewrite losses dict
     log_history(history, SAVE_FOLDER)
+
+    # Save only means of means of activations and means of std of activations
+    hook.aggregate_mean()
+
+    log_activations(activations, hook, SAVE_ACTIVATIONS, epoch)
