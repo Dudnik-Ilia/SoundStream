@@ -3,7 +3,7 @@ import torch
 
 # Lambdas for loss weighting
 LAMBDA_ADV = 1
-LAMBDA_FEAT = 10
+LAMBDA_FEAT = 100
 LAMBDA_REC = 1
 lambdas = [LAMBDA_ADV, LAMBDA_FEAT, LAMBDA_REC]
 

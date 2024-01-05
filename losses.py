@@ -35,24 +35,23 @@ def feature_loss(features_stft_disc_x, features_wave_disc_x,
     return loss
 
 
-def spectral_reconstruction_loss(x, G_x, eps=1e-4, device="cpu", sr=24000):
+def spectral_reconstruction_loss(x, G_x, eps=1e-5, device="cpu", sr=24000):
     L = 0
     for i in torch.arange(6, 12):
         s = 2 ** i
         alpha_s = (s / 2) ** 0.5
-        melspec = MelSpectrogram(sample_rate=sr, n_fft=s,
+        melspec = MelSpectrogram(sample_rate=sr, n_fft=s, win_length=s,
                                  hop_length=s // 4, n_mels=64).to(device)
         S_x = melspec(x)
         S_G_x = melspec(G_x)
 
-        # MAE instead of just summ (independent of length)
-        loss_1 = F.l1_loss(S_x, S_G_x)
-        loss_2 = (torch.log(S_x.abs() + eps) - torch.log(S_G_x.abs() + eps)) ** 2
-        loss_2 = loss_2.sum(dim=-2)
-        loss_2 = loss_2.sqrt()
-        # Also mean instead of a summ
-        loss_2 = alpha_s * loss_2.mean()
-        L += loss_1+loss_2
+        # Summ the freq mel dim, cause loss vector is applied to freq mel coefs
+        # Then take mean over time+batch but summ over samples in the batch
+        loss_1 = (S_x - S_G_x).abs().sum(dim=2).mean()
+        loss_2 = torch.log(S_x + eps) - torch.log(S_G_x + eps)
+        loss_2 = torch.pow(loss_2, 2).sum(dim=2).sqrt().mean()
+
+        L += loss_1 + alpha_s * loss_2
 
     return L
 
