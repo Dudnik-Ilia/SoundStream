@@ -34,6 +34,10 @@ def feature_loss(features_stft_disc_x, features_wave_disc_x,
 
     return loss
 
+def temporal_reconstruction_loss(x, G_x):
+    loss = torch.nn.L1Loss(reduction="sum")
+    return loss(x, G_x)
+
 
 def spectral_reconstruction_loss(x, G_x, eps=1e-5, device="cpu", sr=24000):
     L = 0
@@ -88,13 +92,15 @@ def criterion_g(x, G_x, features_stft_disc_x,
     reconstruction, adversarial and feature
     """
     LAMBDA_ADV, LAMBDA_FEAT, LAMBDA_REC = lambdas[0], lambdas[1], lambdas[2]
+    LAMBDA_REC_TIME = 1
 
     adv_loss = LAMBDA_ADV * adversarial_g_loss(features_stft_disc_G_x, features_wave_disc_G_x,
                                                lengths_stft, lengths_wave)
     feat_loss = LAMBDA_FEAT * feature_loss(features_stft_disc_x, features_wave_disc_x,
                                            features_stft_disc_G_x, features_wave_disc_G_x,
                                            lengths_wave, lengths_stft)
-    rec_loss = LAMBDA_REC * spectral_reconstruction_loss(x, G_x, device=device, sr=sr)
+    rec_freq_loss = LAMBDA_REC * spectral_reconstruction_loss(x, G_x, device=device, sr=sr)
+    rec_time_loss = temporal_reconstruction_loss(x, G_x)
 
-    total_loss = adv_loss + feat_loss + rec_loss
+    total_loss = adv_loss + feat_loss + rec_freq_loss + LAMBDA_REC_TIME * rec_time_loss
     return total_loss
