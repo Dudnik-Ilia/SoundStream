@@ -14,7 +14,7 @@ N_EPOCHS = 15
 N_WARMUP_EPOCHS = 3
 TRAIN_DISC_EVERY = 2
 BATCH_SIZE = 6
-LR = 1e-6
+LR = 1e-8
 SAVE_FOLDER = os.path.join("/home/woody/iwi1/iwi1010h/checkpoints/SoundStream/", os.environ['SLURM_JOBID'])
 SAVE_ACTIVATIONS = SAVE_FOLDER
 
