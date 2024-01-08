@@ -137,7 +137,7 @@ for epoch in range(1, N_EPOCHS + 1):
         history[f"{epoch}"]["loss"].append(loss_g.detach().item())
         history[f"{epoch}"]["grad_norm"].append(grad_norm.detach().item())
 
-        if epoch > N_WARMUP_EPOCHS:
+        if epoch > N_WARMUP_EPOCHS or RESUME:
             if i % TRAIN_DISC_EVERY == 0:
                 i = 0
                 # Run once for through Discriminators (because this time need to propagate just discriminator)
