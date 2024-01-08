@@ -1,4 +1,6 @@
 from time import gmtime, strftime
+
+import numpy as np
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -131,6 +133,7 @@ for epoch in range(1, N_EPOCHS + 1):
             norm = 100
         else:
             norm = 10
+        norm = np.Inf
         grad_norm = torch.nn.utils.clip_grad_norm_(soundstream.parameters(), max_norm=float(norm))
         optimizer_g.step()
 

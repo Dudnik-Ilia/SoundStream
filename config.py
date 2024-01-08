@@ -28,7 +28,7 @@ TEST_FILE = "test-clean.tar.gz"
 
 # If continue training
 RESUME = True
-CHECKPOINT_REPOSITORY = os.path.join("/home/woody/iwi1/iwi1010h/checkpoints/SoundStream/", "738213")
-CHECKPOINT_NAME = "la_1_lr_1_lf_100_ep_15_01-06_18:46.cpt"
+CHECKPOINT_REPOSITORY = os.path.join("/home/woody/iwi1/iwi1010h/checkpoints/SoundStream/", "739113")
+CHECKPOINT_NAME = "la_1_lr_1_lf_100_ep_11_01-08_18:38.cpt"
 
 DEVICE = str(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
