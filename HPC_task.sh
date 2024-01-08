@@ -1,8 +1,8 @@
 #!/bin/bash -l
 #SBATCH --job-name=soundstream_training_100_resume
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:1
-#SBATCH --partition=rtx3080
+#SBATCH --gres=gpu:a100:1
+#SBATCH --partition=a100
 #SBATCH --output=LOG_%x.%j.out
 #SBATCH --error=LOG_%x.%j.err
 #SBATCH --mail-type=end,fail
