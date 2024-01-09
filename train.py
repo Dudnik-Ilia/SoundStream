@@ -133,7 +133,6 @@ for epoch in range(1, N_EPOCHS + 1):
             norm = 100
         else:
             norm = 10
-        norm = 10
         grad_norm = torch.nn.utils.clip_grad_norm_(soundstream.parameters(), max_norm=float(norm))
         optimizer_g.step()
 

@@ -14,7 +14,7 @@ N_EPOCHS = 15
 N_WARMUP_EPOCHS = 3
 TRAIN_DISC_EVERY = 2
 BATCH_SIZE = 6
-LR = 1e-8
+LR = 1e-10
 SAVE_FOLDER = os.path.join("/home/woody/iwi1/iwi1010h/checkpoints/SoundStream/", os.environ['SLURM_JOBID'])
 SAVE_ACTIVATIONS = SAVE_FOLDER
 
@@ -23,7 +23,7 @@ W, H = 1024, 256
 SR = 24000
 
 # Data names that should be at WORK
-TRAIN_FILE = "train-clean-100.tar.gz"
+TRAIN_FILE = "train-clean-360.tar.gz"
 TEST_FILE = "test-clean.tar.gz"
 
 # If continue training
